@@ -192,7 +192,7 @@
     .step-icon {
       width: 36px; height: 36px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800; color: white; flex-shrink: 0;
+      font-size: 12px; font-weight: 800; color: white; flex-shrink: 0;
     }
     .step-icon.m1 { background: var(--m1); }
     .step-icon.m2 { background: var(--m2); }
@@ -211,7 +211,7 @@
 
 <header>
   <h1>Київське Метро</h1>
-  <p>Розрахунок маршруту</p>
+  <p>Розрахунок часу та маршруту</p>
 </header>
 
 <div class="container">
@@ -253,7 +253,7 @@
   </div>
 
   <button class="calc-btn" id="calcBtn" onclick="calculate()" disabled>
-    Знайти маршрут
+    Вирахувати час
   </button>
 
   <div class="card" id="resultCard">
@@ -549,10 +549,9 @@ function renderHours() {
     };
     scroll.appendChild(btn);
   }
-  setTimeout(() => {
-    const active = scroll.querySelector('.active');
-    if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
-  }, 50);
+  // Scroll horizontally only — avoid scrollIntoView which moves the page vertically
+  const chipWidth = 46 + 6; // width + gap
+  scroll.scrollLeft = (selHour - 5) * chipWidth - scroll.clientWidth / 2 + chipWidth / 2;
 }
 
 function updatePeakLabel() {
@@ -643,7 +642,7 @@ function renderResult(res) {
       const lc = step.line.toLowerCase();
       html += `
         <div class="path-step">
-          <div class="step-icon ${lc}">${step.line.slice(1)}</div>
+          <div class="step-icon ${lc}">${step.line}</div>
           <div class="step-body">
             <div class="step-label">Посадка · ${step.line}</div>
             <div class="step-main">${step.station}</div>
@@ -656,7 +655,7 @@ function renderResult(res) {
       const lc = step.line.toLowerCase();
       html += `
         <div class="path-step">
-          <div class="step-icon ${lc}">${step.line.slice(1)}</div>
+          <div class="step-icon ${lc}">${step.line}</div>
           <div class="step-body">
             <div class="step-label">Маршрут · ${step.line} · ${pluralStop(stops)}</div>
             <div class="step-main">${step.stations.join(' → ')}</div>
