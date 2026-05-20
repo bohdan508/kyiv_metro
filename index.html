@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Київське Метро</title>
+  <style>
+    :root {
+      --m1: #d32f2f;
+      --m2: #1565c0;
+      --m3: #2e7d32;
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --muted: #6c757d;
+      --border: #e0e0e0;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      background: #1a1a2e;
+      color: white;
+      padding: 18px 20px 16px;
+      text-align: center;
+    }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+    header p { font-size: 13px; opacity: 0.6; margin-top: 3px; }
+
+    .container { max-width: 480px; margin: 0 auto; padding: 14px 14px 32px; }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+
+    .line-tabs { display: flex; gap: 8px; }
+    .line-tab {
+      flex: 1; padding: 12px 4px; border: none; border-radius: 10px;
+      font-size: 16px; font-weight: 800; cursor: pointer;
+      transition: opacity 0.15s, box-shadow 0.15s;
+      color: white; opacity: 0.3;
+    }
+    .line-tab.m1 { background: var(--m1); }
+    .line-tab.m2 { background: var(--m2); }
+    .line-tab.m3 { background: var(--m3); }
+    .line-tab.active { opacity: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+
+    .station-list-wrap {
+      position: relative;
+      padding-left: 28px;
+      margin-top: 10px;
+    }
+    .station-line {
+      position: absolute;
+      left: 10px; top: 16px; bottom: 16px;
+      width: 3px; border-radius: 2px;
+    }
+    .station-list {
+      display: flex; flex-direction: column;
+      max-height: 320px; overflow-y: auto;
+      gap: 2px; padding: 2px 0;
+      scrollbar-width: thin;
+    }
+    .station-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px 9px 4px;
+      border-radius: 8px; cursor: pointer;
+      transition: background 0.1s;
+    }
+    .station-item:hover { background: #f5f5f5; }
+    .station-item.sel-from { background: #fff3f3; }
+    .station-item.sel-to   { background: #eff6ff; }
+
+    .station-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 3px solid white; flex-shrink: 0;
+      position: relative; z-index: 1;
+      margin-left: -20px;
+    }
+
+    .station-name { font-size: 15px; flex: 1; line-height: 1.3; }
+    .station-item.sel-from .station-name,
+    .station-item.sel-to .station-name { font-weight: 600; }
+
+    .transfer-chips { display: flex; gap: 4px; flex-shrink: 0; }
+    .transfer-chip {
+      font-size: 10px; font-weight: 700; padding: 2px 6px;
+      border-radius: 10px; color: white;
+    }
+    .transfer-chip.m1 { background: var(--m1); }
+    .transfer-chip.m2 { background: var(--m2); }
+    .transfer-chip.m3 { background: var(--m3); }
+
+    .route-row { display: flex; align-items: stretch; gap: 10px; }
+    .route-box {
+      flex: 1; padding: 10px 12px; border-radius: 10px;
+      font-size: 14px; font-weight: 500;
+      min-height: 48px; display: flex; align-items: center;
+      justify-content: center; text-align: center;
+      line-height: 1.3; word-break: break-word;
+    }
+    .route-box.from-box {
+      background: #fff3f3; color: #b71c1c;
+      border: 2px dashed #ef9a9a;
+    }
+    .route-box.from-box.set { border-style: solid; border-color: var(--m1); }
+    .route-box.to-box {
+      background: #eff6ff; color: #0d47a1;
+      border: 2px dashed #90caf9;
+    }
+    .route-box.to-box.set { border-style: solid; border-color: var(--m2); }
+    .route-arrow { display: flex; align-items: center; color: var(--muted); font-size: 20px; flex-shrink: 0; }
+    .clear-btn {
+      display: block; margin: 10px auto 0;
+      background: none; border: none; color: var(--muted);
+      font-size: 13px; cursor: pointer; padding: 4px 12px;
+    }
+
+    .day-toggle {
+      display: flex; background: #f0f0f0;
+      border-radius: 10px; padding: 3px; gap: 3px;
+    }
+    .day-btn {
+      flex: 1; padding: 10px 8px; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      background: transparent; color: var(--muted); transition: all 0.15s;
+    }
+    .day-btn.active {
+      background: white; color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12); font-weight: 600;
+    }
+
+    .hour-scroll {
+      display: flex; gap: 6px; overflow-x: auto;
+      scroll-snap-type: x mandatory; padding: 4px 0 8px;
+      scrollbar-width: none;
+    }
+    .hour-scroll::-webkit-scrollbar { display: none; }
+    .hour-chip {
+      scroll-snap-align: start; flex-shrink: 0;
+      width: 46px; height: 46px; border: none;
+      border-radius: 10px; background: #f0f0f0;
+      color: var(--muted); font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: all 0.1s;
+    }
+    .hour-chip.active { background: #1a1a2e; color: white; font-weight: 700; }
+    .hour-chip.peak { background: #fff8e1; color: #e65100; }
+    .hour-chip.peak.active { background: #e65100; color: white; }
+
+    .calc-btn {
+      width: 100%; padding: 16px; background: #1a1a2e; color: white;
+      border: none; border-radius: var(--radius); font-size: 16px;
+      font-weight: 600; cursor: pointer; margin-bottom: 12px;
+      transition: opacity 0.15s;
+    }
+    .calc-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .calc-btn:not(:disabled):active { opacity: 0.8; }
+
+    #resultCard { display: none; }
+    #resultCard.show { display: block; }
+
+    .result-header { margin-bottom: 16px; }
+    .result-time-row { display: flex; align-items: baseline; gap: 8px; }
+    .result-time { font-size: 36px; font-weight: 800; }
+    .result-pm { font-size: 18px; color: var(--muted); }
+    .result-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .path-steps { display: flex; flex-direction: column; }
+    .path-step {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .path-step:last-child { border-bottom: none; }
+
+    .step-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; color: white; flex-shrink: 0;
+    }
+    .step-icon.m1 { background: var(--m1); }
+    .step-icon.m2 { background: var(--m2); }
+    .step-icon.m3 { background: var(--m3); }
+    .step-icon.xfer { background: #607d8b; font-size: 18px; }
+
+    .step-body { flex: 1; }
+    .step-label { font-size: 12px; color: var(--muted); margin-bottom: 2px; font-weight: 500; }
+    .step-main { font-size: 15px; font-weight: 500; line-height: 1.4; }
+    .step-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    .no-route { text-align: center; padding: 24px; color: var(--muted); font-size: 15px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Київське Метро</h1>
+  <p>Розрахунок маршруту</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">Лінія та станція</div>
+    <div class="line-tabs">
+      <button class="line-tab m1 active" onclick="switchLine('M1')">М1</button>
+      <button class="line-tab m2" onclick="switchLine('M2')">М2</button>
+      <button class="line-tab m3" onclick="switchLine('M3')">М3</button>
+    </div>
+    <div class="station-list-wrap">
+      <div class="station-line" id="stationLine"></div>
+      <div class="station-list" id="stationList"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Маршрут</div>
+    <div class="route-row">
+      <div class="route-box from-box" id="boxFrom">Звідки</div>
+      <div class="route-arrow">→</div>
+      <div class="route-box to-box" id="boxTo">Куди</div>
+    </div>
+    <button class="clear-btn" onclick="clearSel()">✕ Скинути вибір</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">День</div>
+    <div class="day-toggle">
+      <button class="day-btn active" id="btnWd" onclick="setDay('weekday')">Будній день</button>
+      <button class="day-btn" id="btnWe" onclick="setDay('weekend')">Вихідний</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Година — <span id="peakLabel"></span></div>
+    <div class="hour-scroll" id="hourScroll"></div>
+  </div>
+
+  <button class="calc-btn" id="calcBtn" onclick="calculate()" disabled>
+    Знайти маршрут
+  </button>
+
+  <div class="card" id="resultCard">
+    <div id="resultContent"></div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+let data = null;
+let lineStations = {};
+let adjacency = {};
+let transferMap = {};
+
+let currentLine = 'M1';
+let selFrom = null;
+let selTo = null;
+let selDay = 'weekday';
+let selHour = 8;
+
+const LINE_COLORS = { M1: '#d32f2f', M2: '#1565c0', M3: '#2e7d32' };
+
+function boot() {
+  data = { "segments": [{ "from": "Академмістечко", "to": "Житомирська", "time": 90, "line": "M1" }, { "from": "Житомирська", "to": "Святошин", "time": 90, "line": "M1" }, { "from": "Святошин", "to": "Нивки", "time": 90, "line": "M1" }, { "from": "Нивки", "to": "Берестейська", "time": 90, "line": "M1" }, { "from": "Берестейська", "to": "Шулявська", "time": 90, "line": "M1" }, { "from": "Шулявська", "to": "Політехнічний інститут", "time": 90, "line": "M1" }, { "from": "Політехнічний інститут", "to": "Вокзальна", "time": 90, "line": "M1" }, { "from": "Вокзальна", "to": "Університет", "time": 90, "line": "M1" }, { "from": "Університет", "to": "Театральна", "time": 90, "line": "M1" }, { "from": "Театральна", "to": "Хрещатик", "time": 90, "line": "M1" }, { "from": "Хрещатик", "to": "Арсенальна", "time": 90, "line": "M1" }, { "from": "Арсенальна", "to": "Дніпро", "time": 90, "line": "M1" }, { "from": "Дніпро", "to": "Гідропарк", "time": 90, "line": "M1" }, { "from": "Гідропарк", "to": "Лівобережна", "time": 90, "line": "M1" }, { "from": "Лівобережна", "to": "Дарниця", "time": 90, "line": "M1" }, { "from": "Дарниця", "to": "Чернігівська", "time": 90, "line": "M1" }, { "from": "Чернігівська", "to": "Лісова", "time": 90, "line": "M1" }, { "from": "Героїв Дніпра", "to": "Мінська", "time": 90, "line": "M2" }, { "from": "Мінська", "to": "Оболонь", "time": 90, "line": "M2" }, { "from": "Оболонь", "to": "Почайна", "time": 90, "line": "M2" }, { "from": "Почайна", "to": "Тараса Шевченка", "time": 90, "line": "M2" }, { "from": "Тараса Шевченка", "to": "Контрактова площа", "time": 90, "line": "M2" }, { "from": "Контрактова площа", "to": "Поштова площа", "time": 90, "line": "M2" }, { "from": "Поштова площа", "to": "Майдан Незалежності", "time": 90, "line": "M2" }, { "from": "Майдан Незалежності", "to": "Площа Українських Героїв", "time": 90, "line": "M2" }, { "from": "Площа Українських Героїв", "to": "Олімпійська", "time": 90, "line": "M2" }, { "from": "Олімпійська", "to": "Палац «Україна»", "time": 90, "line": "M2" }, { "from": "Палац «Україна»", "to": "Либідська", "time": 90, "line": "M2" }, { "from": "Либідська", "to": "Деміївська", "time": 90, "line": "M2" }, { "from": "Деміївська", "to": "Голосіївська", "time": 90, "line": "M2" }, { "from": "Голосіївська", "to": "Васильківська", "time": 90, "line": "M2" }, { "from": "Васильківська", "to": "Виставковий центр", "time": 90, "line": "M2" }, { "from": "Виставковий центр", "to": "Іподром", "time": 90, "line": "M2" }, { "from": "Іподром", "to": "Теремки", "time": 90, "line": "M2" }, { "from": "Сирець", "to": "Дорогожичі", "time": 90, "line": "M3" }, { "from": "Дорогожичі", "to": "Лук'янівська", "time": 90, "line": "M3" }, { "from": "Лук'янівська", "to": "Золоті ворота", "time": 90, "line": "M3" }, { "from": "Золоті ворота", "to": "Палац спорту", "time": 90, "line": "M3" }, { "from": "Палац спорту", "to": "Кловська", "time": 90, "line": "M3" }, { "from": "Кловська", "to": "Печерська", "time": 90, "line": "M3" }, { "from": "Печерська", "to": "Звіринецька", "time": 90, "line": "M3" }, { "from": "Звіринецька", "to": "Видубичі", "time": 90, "line": "M3" }, { "from": "Видубичі", "to": "Славутич", "time": 90, "line": "M3" }, { "from": "Славутич", "to": "Осокорки", "time": 90, "line": "M3" }, { "from": "Осокорки", "to": "Позняки", "time": 90, "line": "M3" }, { "from": "Позняки", "to": "Харківська", "time": 90, "line": "M3" }, { "from": "Харківська", "to": "Вирлиця", "time": 90, "line": "M3" }, { "from": "Вирлиця", "to": "Бориспільська", "time": 90, "line": "M3" }, { "from": "Бориспільська", "to": "Червоний хутір", "time": 90, "line": "M3" } ], "transfers": [{ "from": "Золоті ворота", "to": "Театральна", "standard_time": 120, "peak_time": 210 }, { "from": "Майдан Незалежності", "to": "Хрещатик", "standard_time": 120, "peak_time": 210 }, { "from": "Площа Українських Героїв", "to": "Палац спорту", "standard_time": 120, "peak_time": 210 } ], "headways": { "weekend": { "morning": { "hours": [5, 6, 7, 8, 9], "lines": { "M1": {"interval": 570, "error": 30}, "M2": {"interval": 450, "error": 30}, "M3": {"interval": 570, "error": 30} } }, "afternoon": { "hours": [10, 11, 12, 13, 14, 15, 16], "lines": { "M1": {"interval": 390, "error": 30}, "M2": {"interval": 360, "error": 30}, "M3": {"interval": 390, "error": 30} } }, "evening": { "hours": [17, 18, 19, 20, 21, 22], "lines": { "M1": {"interval": 600, "error": 60}, "M2": {"interval": 570, "error": 90}, "M3": {"interval": 600, "error": 60} } } }, "weekday": { "morning": { "hours": [5, 6, 7, 9], "lines": { "M1": {"interval": 480, "error": 60}, "M2": {"interval": 510, "error": 90}, "M3": {"interval": 480, "error": 60} } }, "morning_peak": { "hours": [8], "lines": { "M1": {"interval": 210, "error": 30}, "M2": {"interval": 210, "error": 30}, "M3": {"interval": 210, "error": 30} } }, "afternoon": { "hours": [10, 11, 12, 13, 14, 15, 16], "lines": { "M1": {"interval": 300, "error": 60}, "M2": {"interval": 330, "error": 30}, "M3": {"interval": 300, "error": 60} } }, "evening": { "hours": [17, 19, 20, 21, 22], "lines": { "M1": {"interval": 540, "error": 60}, "M2": {"interval": 570, "error": 90}, "M3": {"interval": 540, "error": 60} } }, "evening_peak": { "hours": [18], "lines": { "M1": {"interval": 210, "error": 30}, "M2": {"interval": 240, "error": 60}, "M3": {"interval": 210, "error": 30} } } } } }
+  buildGraph();
+  renderHours();
+  switchLine('M1');
+  updatePeakLabel();
+}
+
+function buildGraph() {
+  for (const seg of data.segments) {
+    if (!adjacency[seg.from]) adjacency[seg.from] = [];
+    if (!adjacency[seg.to])   adjacency[seg.to]   = [];
+    adjacency[seg.from].push({ neighbor: seg.to,   time: seg.time, line: seg.line });
+    adjacency[seg.to].push(  { neighbor: seg.from, time: seg.time, line: seg.line });
+  }
+  for (const tr of data.transfers) {
+    if (!transferMap[tr.from]) transferMap[tr.from] = [];
+    if (!transferMap[tr.to])   transferMap[tr.to]   = [];
+    transferMap[tr.from].push(tr);
+    transferMap[tr.to].push(tr);
+  }
+  const byLine = {};
+  for (const seg of data.segments) {
+    if (!byLine[seg.line]) byLine[seg.line] = [];
+    byLine[seg.line].push(seg);
+  }
+  for (const [line, segs] of Object.entries(byLine)) {
+    lineStations[line] = chainStations(segs);
+  }
+}
+
+function chainStations(segs) {
+  const adj = {};
+  for (const s of segs) {
+    if (!adj[s.from]) adj[s.from] = [];
+    if (!adj[s.to])   adj[s.to]   = [];
+    adj[s.from].push(s.to);
+    adj[s.to].push(s.from);
+  }
+  const start = Object.entries(adj).find(([, ns]) => ns.length === 1)[0];
+  const ordered = [start];
+  const seen = new Set([start]);
+  let cur = start;
+  while (true) {
+    const next = (adj[cur] || []).find(n => !seen.has(n));
+    if (!next) break;
+    ordered.push(next); seen.add(next); cur = next;
+  }
+  return ordered;
+}
+
+function getHeadway(line, day, hour) {
+  for (const period of Object.values(data.headways[day])) {
+    if (period.hours.includes(hour)) return period.lines[line];
+  }
+  const periods = Object.values(data.headways[day]);
+  return periods[periods.length - 1].lines[line];
+}
+
+function isPeak(day, hour) {
+  return day === 'weekday' && (hour === 8 || hour === 18);
+}
+
+function getTransferTime(tr, day, hour) {
+  return isPeak(day, hour) ? tr.peak_time : tr.standard_time;
+}
+
+function linesAt(station) {
+  return [...new Set((adjacency[station] || []).map(e => e.line))];
+}
+
+function sk(station, line) { return station + '\x00' + (line || ''); }
+
+function dijkstra(start, end, day, hour) {
+  if (start === end) return { totalTime: 0, totalError: 0, steps: [] };
+
+  const dist = new Map();
+  const prev = new Map();
+  const pq = [{ cost: 0, station: start, line: '' }];
+  dist.set(sk(start, ''), 0);
+
+  while (pq.length) {
+    pq.sort((a, b) => a.cost - b.cost);
+    const { cost, station, line } = pq.shift();
+    const key = sk(station, line);
+    if (cost > (dist.get(key) ?? Infinity)) continue;
+    if (station === end) break;
+
+    if (line === '') {
+      // Board any line here
+      for (const l of linesAt(station)) {
+        const hw = getHeadway(l, day, hour);
+        const wait = hw.interval / 2;
+        const err = hw.interval / 2 + hw.error;
+        const nc = cost + wait;
+        const nk = sk(station, l);
+        if (nc < (dist.get(nk) ?? Infinity)) {
+          dist.set(nk, nc);
+          prev.set(nk, { fromKey: key, action: 'board', station, line: l, wait, err });
+          pq.push({ cost: nc, station, line: l });
+        }
+      }
+      // Walk transfer
+      for (const tr of (transferMap[station] || [])) {
+        const partner = tr.from === station ? tr.to : tr.from;
+        const tt = getTransferTime(tr, day, hour);
+        const nc = cost + tt;
+        const nk = sk(partner, '');
+        if (nc < (dist.get(nk) ?? Infinity)) {
+          dist.set(nk, nc);
+          prev.set(nk, { fromKey: key, action: 'transfer', from: station, to: partner, time: tt });
+          pq.push({ cost: nc, station: partner, line: '' });
+        }
+      }
+    } else {
+      // Travel on line
+      for (const edge of (adjacency[station] || [])) {
+        if (edge.line !== line) continue;
+        const nc = cost + edge.time;
+        const nk = sk(edge.neighbor, line);
+        if (nc < (dist.get(nk) ?? Infinity)) {
+          dist.set(nk, nc);
+          prev.set(nk, { fromKey: key, action: 'travel', from: station, to: edge.neighbor, time: edge.time, line });
+          pq.push({ cost: nc, station: edge.neighbor, line });
+        }
+      }
+      // Walk transfer
+      for (const tr of (transferMap[station] || [])) {
+        const partner = tr.from === station ? tr.to : tr.from;
+        const tt = getTransferTime(tr, day, hour);
+        const nc = cost + tt;
+        const nk = sk(partner, '');
+        if (nc < (dist.get(nk) ?? Infinity)) {
+          dist.set(nk, nc);
+          prev.set(nk, { fromKey: key, action: 'transfer', from: station, to: partner, time: tt });
+          pq.push({ cost: nc, station: partner, line: '' });
+        }
+      }
+    }
+  }
+
+  // Find best arrival at end (any line state)
+  let bestKey = null, bestCost = Infinity;
+  for (const [k, c] of dist.entries()) {
+    if (k.startsWith(end + '\x00') && c < bestCost) {
+      bestCost = c; bestKey = k;
+    }
+  }
+  if (!bestKey) return null;
+
+  // Reconstruct
+  const raw = [];
+  let cur = bestKey;
+  while (prev.has(cur)) {
+    raw.unshift(prev.get(cur));
+    cur = prev.get(cur).fromKey;
+  }
+  let totalError = 0;
+  for (const s of raw) if (s.action === 'board') totalError += s.err;
+  return { totalTime: bestCost, totalError, steps: mergeTravel(raw) };
+}
+
+function mergeTravel(raw) {
+  const out = [];
+  let i = 0;
+  while (i < raw.length) {
+    const s = raw[i];
+    if (s.action === 'travel') {
+      const stations = [s.from, s.to];
+      let t = s.time;
+      const line = s.line;
+      while (i + 1 < raw.length && raw[i+1].action === 'travel' && raw[i+1].line === line) {
+        i++;
+        stations.push(raw[i].to);
+        t += raw[i].time;
+      }
+      out.push({ action: 'ride', line, stations, time: t });
+    } else {
+      out.push(s);
+    }
+    i++;
+  }
+  return out;
+}
+
+function fmtMin(s) {
+  const m = Math.round(s / 60);
+  if (m < 60) return m + ' хв';
+  return Math.floor(m/60) + ' год ' + (m%60 ? m%60 + ' хв' : '');
+}
+
+function pluralStop(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return n + ' зупинка';
+  if ([2,3,4].includes(n%10) && ![12,13,14].includes(n%100)) return n + ' зупинки';
+  return n + ' зупинок';
+}
+
+function transfersAt(station) {
+  return (transferMap[station] || []).map(tr => {
+    const partner = tr.from === station ? tr.to : tr.from;
+    return linesAt(partner)[0];
+  }).filter(Boolean);
+}
+
+function switchLine(line) {
+  currentLine = line;
+  document.querySelectorAll('.line-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector('.line-tab.' + line.toLowerCase()).classList.add('active');
+  document.getElementById('stationLine').style.background = LINE_COLORS[line];
+  renderStationList();
+}
+
+function renderStationList() {
+  const list = document.getElementById('stationList');
+  list.innerHTML = '';
+  const color = LINE_COLORS[currentLine];
+
+  for (const st of (lineStations[currentLine] || [])) {
+    const isFrom = st === selFrom;
+    const isTo   = st === selTo;
+    const chips  = transfersAt(st);
+
+    const item = document.createElement('div');
+    item.className = 'station-item' + (isFrom ? ' sel-from' : isTo ? ' sel-to' : '');
+    item.onclick = () => onStationClick(st);
+
+    const dot = document.createElement('div');
+    dot.className = 'station-dot';
+    const dc = isFrom ? '#d32f2f' : isTo ? '#1565c0' : color;
+    dot.style.background = dc;
+    dot.style.boxShadow = '0 0 0 2px ' + dc;
+
+    const name = document.createElement('div');
+    name.className = 'station-name';
+    name.textContent = st;
+
+    item.appendChild(dot);
+    item.appendChild(name);
+
+    if (chips.length) {
+      const wrap = document.createElement('div');
+      wrap.className = 'transfer-chips';
+      for (const cl of chips) {
+        const chip = document.createElement('span');
+        chip.className = 'transfer-chip ' + cl.toLowerCase();
+        chip.textContent = cl;
+        wrap.appendChild(chip);
+      }
+      item.appendChild(wrap);
+    }
+
+    list.appendChild(item);
+  }
+}
+
+function renderHours() {
+  const scroll = document.getElementById('hourScroll');
+  scroll.innerHTML = '';
+  for (let h = 5; h <= 22; h++) {
+    const peak = (h === 8 || h === 18);
+    const btn = document.createElement('button');
+    btn.className = 'hour-chip' + (h === selHour ? ' active' : '') + (peak ? ' peak' : '');
+    btn.textContent = String(h).padStart(2, '0');
+    btn.onclick = () => {
+      selHour = h;
+      document.querySelectorAll('.hour-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePeakLabel();
+    };
+    scroll.appendChild(btn);
+  }
+  setTimeout(() => {
+    const active = scroll.querySelector('.active');
+    if (active) active.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, 50);
+}
+
+function updatePeakLabel() {
+  const lbl = document.getElementById('peakLabel');
+  if (selDay === 'weekday' && (selHour === 8 || selHour === 18)) {
+    lbl.textContent = String(selHour).padStart(2,'0') + ':00 — час-пік';
+    lbl.style.color = '#e65100';
+  } else {
+    lbl.textContent = String(selHour).padStart(2,'0') + ':00';
+    lbl.style.color = '';
+  }
+}
+
+function onStationClick(st) {
+  if (selFrom === st)      { selFrom = null; }
+  else if (selTo === st)   { selTo = null; }
+  else if (!selFrom)       { selFrom = st; }
+  else if (!selTo)         { selTo = st; }
+  else                     { selFrom = st; selTo = null; }
+  updateRouteDisplay();
+  renderStationList();
+  updateCalcBtn();
+}
+
+function clearSel() {
+  selFrom = null; selTo = null;
+  updateRouteDisplay();
+  renderStationList();
+  updateCalcBtn();
+  document.getElementById('resultCard').classList.remove('show');
+}
+
+function setDay(day) {
+  selDay = day;
+  document.getElementById('btnWd').classList.toggle('active', day === 'weekday');
+  document.getElementById('btnWe').classList.toggle('active', day === 'weekend');
+  updatePeakLabel();
+}
+
+function updateRouteDisplay() {
+  const bf = document.getElementById('boxFrom');
+  const bt = document.getElementById('boxTo');
+  bf.textContent = selFrom || 'Звідки';
+  bf.classList.toggle('set', !!selFrom);
+  bt.textContent = selTo || 'Куди';
+  bt.classList.toggle('set', !!selTo);
+}
+
+function updateCalcBtn() {
+  document.getElementById('calcBtn').disabled = !(selFrom && selTo && selFrom !== selTo);
+}
+
+function calculate() {
+  if (!selFrom || !selTo || selFrom === selTo) return;
+  const res = dijkstra(selFrom, selTo, selDay, selHour);
+  renderResult(res);
+  document.getElementById('resultCard').classList.add('show');
+  setTimeout(() => {
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 80);
+}
+
+function renderResult(res) {
+  const el = document.getElementById('resultContent');
+
+  if (!res) {
+    el.innerHTML = '<div class="no-route">Маршрут не знайдено</div>';
+    return;
+  }
+
+  const totalM = Math.round(res.totalTime  / 60);
+  const errorM = Math.round(res.totalError / 60);
+
+  let html = `
+    <div class="result-header">
+      <div class="result-time-row">
+        <span class="result-time">${totalM}&nbsp;хв</span>
+        <span class="result-pm">±&nbsp;${errorM}&nbsp;хв</span>
+      </div>
+      <div class="result-subtitle">${selFrom} → ${selTo}</div>
+    </div>
+    <div class="path-steps">`;
+
+  for (const step of res.steps) {
+    if (step.action === 'board') {
+      const wm = Math.round(step.wait / 60);
+      const em = Math.round(step.err  / 60);
+      const lc = step.line.toLowerCase();
+      html += `
+        <div class="path-step">
+          <div class="step-icon ${lc}">${step.line.slice(1)}</div>
+          <div class="step-body">
+            <div class="step-label">Посадка · ${step.line}</div>
+            <div class="step-main">${step.station}</div>
+            <div class="step-sub">Очікування ~${wm}&nbsp;хв&nbsp;±&nbsp;${em}&nbsp;хв</div>
+          </div>
+        </div>`;
+    } else if (step.action === 'ride') {
+      const rm = Math.round(step.time / 60);
+      const stops = step.stations.length - 1;
+      const lc = step.line.toLowerCase();
+      html += `
+        <div class="path-step">
+          <div class="step-icon ${lc}">${step.line.slice(1)}</div>
+          <div class="step-body">
+            <div class="step-label">Маршрут · ${step.line} · ${pluralStop(stops)}</div>
+            <div class="step-main">${step.stations.join(' → ')}</div>
+            <div class="step-sub">${rm}&nbsp;хв</div>
+          </div>
+        </div>`;
+    } else if (step.action === 'transfer') {
+      const tm = Math.round(step.time / 60);
+      const pkNote = isPeak(selDay, selHour) ? ' (час-пік)' : '';
+      html += `
+        <div class="path-step">
+          <div class="step-icon xfer">⇄</div>
+          <div class="step-body">
+            <div class="step-label">Пересадка</div>
+            <div class="step-main">${step.from} → ${step.to}</div>
+            <div class="step-sub">${tm}&nbsp;хв${pkNote}</div>
+          </div>
+        </div>`;
+    }
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+boot();
+</script>
+</body>
+</html>
